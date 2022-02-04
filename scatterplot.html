@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+    <!---------------------------------------------------->
+    <style>
+        .main{
+            height: 100vh;
+            width: 100vw;
+            margin: 0%;
+            padding: 0%;
+            background-color:#7F7C82;
+        }
+        .scatter{
+            width: 800px;
+            height: 600px;
+            background-color:white;
+            border-radius: 20px;
+        }
+        #title{
+            font-size: 30px;
+            text-align: center;
+            padding: 10px;
+        }
+        .detalles{
+            position: absolute;
+            border-radius: 20px;
+            padding: 10px;
+        }
+        .dot{
+            stroke: black;
+            stroke-width: 1;
+        }
+    </style>
+    <!---------------------------------------------------->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <head>
+        <title>scatterplot</title>
+    </head>
+    <body>
+        <div class="main">
+            <div class="scatter">
+                <div id="title">Doping in Professional Bicycle Racing</div>
+                <div class="scatterD3"></div>
+            </div>
+        </div>
+    </body>
+    <!---------------------------------------------------->
+    <script>
+        var url="https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json";
+        //---------------- cuadro detalles
+        var detalles=d3
+            .select('body')
+            .append('div')
+            .attr('class','detalles')
+            .attr('id','tooltip')
+            .style('opacity',0);
+        //-----------------
+        const scatterD3=d3
+        .select(".scatterD3")
+        .append("svg")
+        .attr('height',545)
+        .attr('width',800);
+
+        scatterD3
+        .append("text")
+        .attr("x",-300)
+        .attr("y",25)
+        .attr("transform","rotate(-90)")
+        .style('font-size', 25)
+        .text("Time(minutes)");
+
+        var leyendaContainer=scatterD3
+        .append("g")
+        .attr("id",'legend');
+
+        var leyenda1=leyendaContainer
+        .append("g");
+
+        leyenda1
+        .append("text")
+        .attr("x",530)
+        .attr("y",120)
+        .text("Riders with doping allegations");
+
+        leyenda1
+        .append("rect")
+        .attr("x",730)
+        .attr("y",101)
+        .attr("height",20)
+        .attr("width",20)
+        .style("fill","#FF7878");
+
+        //var leyenda2=leyendaContainer
+        leyenda1
+        .append("text")
+        .attr("x",584)
+        .attr("y",160)
+        .text("No doping allegations");
+
+        leyenda1
+        .append("rect")
+        .attr("x",730)
+        .attr("y",141)
+        .attr("height",20)
+        .attr("width",20)
+        .style("fill","#89B5AF");
+
+
+        d3.json(url, function(error, data) {
+          if (error) throw error;     
+        }).then((data)=>{
+            //---------------- Arreglar datos
+            data.forEach(function(d){
+                var parsedTime=d.Time.split(':');
+                d.Time=new Date(1970,0,1,0,parsedTime[0],parsedTime[1]);
+            });
+            
+            //---------------- eje x(anios)
+            var aniosList=data.map(function(item){
+                return item.Year;
+            });
+            console.log(aniosList);
+
+            var x = d3
+            .scaleLinear()
+            .domain([d3.min(aniosList)-1,d3.max(aniosList)+1])
+            .range([0, 700]);//tamanio
+
+            var xAxis=d3
+            .axisBottom(x)
+            .tickFormat(d3.format('d'));
+
+            scatterD3
+            .append('g')
+            .call(xAxis)
+            .attr('id','x-axis')
+            .attr('transform','translate(70,510)');
+            //---------------- eje y(time min)
+            var dateList=data.map(function(item){
+                return item.Time;
+            });
+            console.log(
+                "tiempo max "+d3.max(dateList)+"\n"+
+                "tiempo min "+d3.min(dateList)+"\n"
+            );
+            var timeFormat = d3.timeFormat('%M:%S');
+
+            var y = d3
+            .scaleTime()
+            .domain(
+                d3.extent(data,function(d){
+                    return d.Time;
+                })
+            )
+            .range([0, 500]);//tamanio
+
+            var yAxis=d3
+            .axisLeft(y)
+            .tickFormat(timeFormat);
+
+            scatterD3
+            .append('g')
+            .call(yAxis)
+            .attr('id','y-axis')
+            .attr('transform','translate(70,10)');
+            //---------------- scatterplot
+            scatterD3
+            .selectAll('dot')
+            .data(data)
+            .enter()
+            .append('circle')
+            .attr('class','dot')
+            .attr('r',5)
+            .attr('data-xvalue',(d)=>{
+                return d.Year;
+            })
+            .attr('data-yvalue',(d)=>{
+                return d.Time.toISOString();
+            })
+            .attr('cx',(d)=>{
+                return x(d.Year);
+            })
+            .attr('cy',(d)=>{
+                return y(d.Time);
+            })
+            .attr('transform','translate(70,10)')
+            .style('fill',(d)=>{
+                if(d.Doping!==''){
+                    return '#FF7878';
+                }
+                else{
+                    return '#89B5AF';
+                }
+            })
+            .on('mouseover',mouseEncima)
+            .on('mouseout',mouseAfuera);
+            //---------------- interaccion
+            function mouseEncima(event,d){
+                detalles.style('opacity',0.92);
+                
+                console.log(event.pageX)
+                var posX=event.pageX + 25;
+                var posY=event.pageY;
+                
+                detalles
+                .html(
+                    d.Name+'('+d.Nationality+')<br/>'+
+                    'Year: '+d.Year+'<br/>'+
+                    'Time: '+timeFormat(d.Time)
+                )
+                .style('left', posX+ 'px')
+                .style('top', posY + 'px')
+                .attr('data-year',d.Year)
+                .style('background-color',function(){
+                    if(d.Doping!==''){
+                        return '#FF7878';
+                    }
+                    else{
+                        return '#89B5AF';
+                    }
+                });
+            }
+            function mouseAfuera(data){
+                detalles
+                .style('opacity',0)
+                .style('left', -1 + 'px')
+                .style('top', -3 + 'px');
+            }
+        });
+    </script>
+</html>

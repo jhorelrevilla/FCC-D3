@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <head>
+        <title>
+            Bar Chart
+        </title>
+    </head>
+    <style>
+        *{
+            margin: 0px;
+            padding: 0px;
+        }
+        .container{
+            height: 500px;
+            width: 700px;
+            border-radius: 20px;
+            background-color:whitesmoke;
+        }
+        .container #title{
+            text-align: center;
+            padding: 10px;
+            font-size: 35px;
+            font: 'Roboto';
+        }
+        .main{
+            background-color:#504e6d;
+            height: 1080px;
+            width: 1920px;
+        }
+    </style>
+    <body>
+        <div class="main">
+            <div class="container">
+                <div id="title">United States GDP</div>
+                <div class="visBarChart"></div>
+            </div>
+        </div>
+        <script>
+            var height=450;
+            var width=700;
+
+            const svgBC=d3
+            .select('.visBarChart')
+            .append('svg')
+            .attr('height',height)
+            .attr('width',width);
+
+            svgBC
+            .append("text")
+            .attr("x",-250)
+            .attr("y",70)
+            .text("Gross Domestic Product");
+
+            svgBC
+            .selectAll('text')
+            .attr("transform", "rotate(-90)");
+
+            d3.json(
+                "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json"
+            ).then((data)=>{
+                //XD
+                function getYear(date){
+                    console.log(date.getDay()+"/"+date.getMonth()+"/"+date.getFullYear());
+                }
+                /*-------------------------EJE X--------------*/
+                //fechas
+                var yearsDate=data.data.map(function(item){
+                    return new Date(item[0]);
+                });
+                //fecha maxima
+                var xMax=new Date(d3.max(yearsDate));
+                xMax.setMonth(xMax.getMonth()+3);
+                //Scale
+                var xScale=d3
+                .scaleTime()
+                .domain([d3.min(yearsDate),xMax])
+                .range([0,width-80]);
+                //eje x
+                var xAxis=d3.axisBottom().scale(xScale);
+
+                svgBC
+                .append('g')
+                .call(xAxis)
+                .attr('id','x-axis')
+                .attr('transform','translate(50,374)');
+                /*-------------------------EJE Y--------------*/
+                var gdp=data.data.map(function(item){
+                    return item[1];
+                });
+                //GDP maximo
+                var gdpMax=d3.max(gdp);
+                //Scale
+                var yAxisScale=d3
+                .scaleLinear()
+                .domain([0,gdpMax])
+                .range([height-80,0]);
+                //eje y
+                var yAxis=d3.axisLeft(yAxisScale);
+
+                svgBC
+                .append('g')
+                .call(yAxis)
+                .attr('id','y-axis')
+                .attr('transform','translate(50,4)');
+                /*-------------------BAR CHART--------------*/
+                var linearScale=d3
+                .scaleLinear()
+                .domain([0,gdpMax])
+                .range([0,height-80]);
+
+                var scaledGdp=gdp.map(function(item){
+                    return linearScale(item);
+                });
+                
+                var GDPList=data.data.map((i)=>{
+                    return i[1];
+                });
+
+                d3.select('svg')
+                .selectAll('rect')
+                .data(scaledGdp)
+                .enter()
+                .append('rect')
+                .attr('x',(d,i)=>{
+                    return xScale(yearsDate[i]);
+                })
+                .attr('y',(d)=>{
+                    return height-d;
+                })
+                .attr('width',width/275)
+                .attr('height',(d)=>d)
+                //.attr('transform','translate(50,-75)');
+                .attr('transform','translate(50.5,-76.5)')
+                .style('fill', '#B6CFB6')
+                .attr('data-date',(d,i)=>{
+                    return data.data[i][0];
+                })
+                .attr('data-gdp',(d,i)=>{
+                    return data.data[i][1];
+                })
+                .attr('index',(d,i)=>i)
+                
+                .on('mouseover',encima)
+                .on('mouseout',dejar);
+
+                function encima(){
+                    d3.select(this).style('opacity',0.3);
+                    var i= this.getAttribute('index');
+                    svgBC
+                    .append("text")
+                    .attr('class','val')
+                    .attr('x',90)
+                    .attr('y',120)
+                    .style('font-size',150)
+                    .text(()=>{
+                        console.log(GDPList[i]);
+                        return GDPList[i]+'$';
+                    });
+                }
+                function dejar(){
+                    d3.select(this).style('opacity',0.9);
+                    svgBC
+                    .selectAll('.val')
+                    .remove();
+                }
+
+            })
+        </script>
+    </body>
+</html>
