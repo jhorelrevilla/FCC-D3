@@ -1,1 +1,5 @@
-# FCC-D3
+## FCC-D3
+
+# Barchart
+
+# Scatterplot
